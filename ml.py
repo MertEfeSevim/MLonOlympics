@@ -1,4 +1,11 @@
 import pandas as pd
+import numpy as np
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn import linear_model
+from sklearn.naive_bayes import GaussianNB
+from sklearn.kernel_approximation import RBFSampler
+from sklearn.linear_model import SGDClassifier
 
 olympics_csv = pd.read_csv('athlete_events.csv')
 
@@ -18,44 +25,34 @@ df['Event'] = df.groupby(['Event']).ngroup()
 df['Weight'] = df['Weight'].fillna(df['Weight'].mean().astype(int))
 
 df['Height'] = df['Height'].fillna(df['Height'].mean().astype(int))
+df['Age'] = df['Age'].fillna(df['Age'].mean().astype(int))
 
 
+X = np.array(df.iloc[:,0:-1])
+Y = np.array([[df['Medal']]])
 
-from sklearn.model_selection import train_test_split
-from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import accuracy_score
+Y = Y.reshape(271116)
 
+X_train, X_test, y_train, y_test = train_test_split(X,Y, test_size=0.2, random_state = 5)
 
-df_withoutMissing = df[['ID','Name','Sex','Height',
-                        'Weight','Team','NOC','Games',
-                        'Year','Season','City','Sport',
-                        'Event','Medal','Age']].dropna()
+#SGD starts here
+clf = linear_model.SGDClassifier()
+clf.fit(X, Y)
 
-age_predicted = df[[]]
-df_withoutMissing = df_withoutMissing.dropna()
+y_pred = clf.predict(X_test)
+print("Accuracy score of SDG: ",accuracy_score(y_test,y_pred))
 
-X = df_withoutMissing.iloc[:,:14]
-Y = df_withoutMissing.iloc[:,14]
-
-X_train, X_test, y_train, y_test = train_test_split(X,Y, test_size=0.4, random_state = 10)
-
-model = GaussianNB()
-model.fit(X_train, y_train)
-
-test_data = df_withoutMissing.iloc[:,:14]
-age_predicted['Age'] = pd.DataFrame(model.predict(test_data))
-
-df['Age'].fillna(age_predicted['Age'],inplace=True)
-
-#///////
-
-X_main = df.iloc[:,:15]
-Y_main = df.iloc[:,15]
-
-X_train, X_test, y_train, y_test = train_test_split(X_main,Y_main, test_size=0.2, random_state = 10)
-
+#Naive bayes starts
 model = GaussianNB()
 model.fit(X_train, y_train)
 
 y_pred = model.predict(X_test)
 print("Accuracy score of Naive Bayes: ",accuracy_score(y_test,y_pred))
+
+#Kernel approximation starts here
+rbf_feature = RBFSampler(gamma=1, random_state=1)
+X_features = rbf_feature.fit_transform(X)
+clf = SGDClassifier()
+clf.fit(X_features, Y)
+
+print("Accuracy score of Kernel Approximation: ",clf.score(X_features, Y))
